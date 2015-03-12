@@ -91,10 +91,13 @@ namespace SpaceEngineersScripting
             debugOutput("AI Iteration " + currentInternalIteration.ToString() + " finished.");
 
             // Without this, changes to variables won't persist.
-            debugOutput("Dumping variable cache to persistent storage")
+            debugOutput("Dumping variable cache to persistent storage");
             flushVariables();
         }
         #region Variables
+        // A dictionary of variables to be persisted, effectively serving as a cache.
+        Dictionary<string, string> Variables = new Dictionary<string, string>();
+        
         //Cached variables, attempting to only fetch everything a single time throughout program life.
         List<IMyAssembler> assemblers = new List<IMyAssembler>();
         List<IMyRefinery> refineries = new List<IMyRefinery>();
@@ -994,61 +997,85 @@ namespace SpaceEngineersScripting
 
             return returndict;
         }
-
-        // A dictionary of variables to be persisted, effectively serving as a cache.
-        Dictionary<string, string> Variables;
         
         // Stores a variable in the Variables dictionary.
         // Use flushVariables (preferrably at the end of execution) to actually save.
         // ** Colons and newlines can now be used, as I'm substituting them internally.
-        void storeVariable(string variable, string name) 
+        void storeVariable(string variable, string name)
         {
-            Variables[name] = variable;
+            if (Variables.ContainsKey(name))
+            {
+                Variables[name] = variable;
+            }
+            else
+            {
+                Variables.Add(name, variable);
+            }
         }
 
         // Reads a variable from the Variables dictionary, which will persist using
         // a screen as storage.
         string getVariable(string name)
         {
-            // No error checking because I totally forgot how. \:D/
-            return Variables[name];
+            if (Variables.ContainsKey(name))
+            {
+                return Variables[name];
+            }
+            else
+            {
+                return null;
+            }
         }
 
         // Write the contents of Variables to a screen for use as storage.
         // If this isn't called, then any changes to variables will not be persistent.
-        void flushVariables(bool append = false) {
+        void flushVariables(bool append = false)
+        {
             StringBuilder result = new StringBuilder();
-            if(append) {
-                // This may result in duplicates if you aren't careful.
-                result.append(storagePanel.GetPublicText());
-            }
-            foreach(KeyValuePair<string, string> entry in Variables)
+            if (append)
             {
-                // Not sure if first value has no \n, but oh well.
-                string value = enty.Value.Replace(":", "[COLON]").Replace("\n", "[NEWLINE]");
-                result.append("\n" + entry.Key + ":" + value);
+                // This may result in duplicates if you aren't careful.
+                result.Append(storagePanel.GetPublicText());
             }
+            string[] keys = new string[Variables.Count];
+            Variables.Keys.CopyTo(keys, 0);
+            string[] values = new string[Variables.Count];
+            Variables.Values.CopyTo(values, 0);
+            for (int i = 0; i < Variables.Count; i++)
+            {
+                KeyValuePair<string, string> entry = new KeyValuePair<string, string>(keys[i], values[i]);
+                // Not sure if first value has no \n, but oh well.
+                string value = entry.Value.Replace(":", "[COLON]").Replace("\n", "[NEWLINE]");
+                result.Append("\n" + entry.Key + ":" + value);
+            }
+           
             storagePanel.WritePublicText(result.ToString());
             debugOutput(storagePanel.DisplayNameText);
         }
-        
+
         // Load variables from a screen used as storage.
         // If this isn't called, then previously persisted variables will not be visible.
-        void loadVariables() {
+        void loadVariables()
+        {
             string[] source = storagePanel.GetPublicText().Split('\n');
-            foreach(string pair in source)
+            foreach (string pair in source)
             {
-                if( pair == "" ) {
+                if (pair == "")
+                {
                     // This is usually true of the first entry.
                     continue;
                 }
-                string[] truePair = pair.split(':');
+                string[] truePair = pair.Split(':');
                 string name = truePair[0];
-                string value = truePair[1].Replace("[NEWLINE]", "\n").Replace("[COLON]", ":");
-                storeVariable(name, value);
+                string value = "";
+                if (truePair.Length > 1)
+                {
+                    value = truePair[1].Replace("[NEWLINE]", "\n").Replace("[COLON]", ":");
+                }
+                storeVariable(value, name);
             }
         }
-        
+
         #endregion
 
 
