@@ -9,16 +9,16 @@ namespace SpaceEngineersScripting
     {
         IMyGridTerminalSystem GridTerminalSystem = null;
 
-#region CodeEditor
+        #region CodeEditor
 
 
         /*
- * Full ship/station AI system by Anthropy in February 2015
- * Parts of battery management code originally written by Stiggan and Malakeh in January 2015.
- * There are lots of comments throughout the code to help you along. 
- * 100K is a lot of bytes so I'm not afraid to run out of them any time soon.
- * Note however that it's still in heavy development and may radically change with updates.
- */
+     * Full ship/station AI system by Anthropy in February 2015
+     * Parts of battery management code originally written by Stiggan and Malakeh in January 2015.
+     * There are lots of comments throughout the code to help you along. 
+     * 100K is a lot of bytes so I'm not afraid to run out of them any time soon.
+     * Note however that it's still in heavy development and may radically change with updates.
+     */
         //You can change some basic behavior here with these variables. 
         //If you want to toggle modules, see the Main() method at the bottom of the file.
 
@@ -26,13 +26,13 @@ namespace SpaceEngineersScripting
         const int executionCap = 120;
         const int debugMaxCharacters = 5000;
         const float minimumGravity = 0.1f;
-        const string shipName = "ShipAI Core v1.3-WIP";
+        const string shipName = "AUTUMN AI Core v1.3-WIP";
         const bool ignoreDevicesThatAreTooMuch = true; //Enforces execution cap
         const bool maintenanceMode = false; //Set this to disable alarms on broken blocks
         const string healingProjectorName = "Projector_healing";
         const bool compactInventories = true; //This will be part of the configuration module later on.
 
-        
+
 
         /// <summary>
         /// This is the main flow of the script/AI. You can enable/disable subroutines by adding/removing them here.
@@ -45,7 +45,7 @@ namespace SpaceEngineersScripting
             // Without this, persisted variables won't be usable.
             debugOutput("Loading variables into internal cache");
             loadVariables();
-            
+
             debugOutput("Running internal Update Modules");
             updateModules(); //Checks if there's a screen module present or other modules in the future.
             updateMiscWithBlacklist(); //Updates things like assemblers, refineries, lights, speakers, etc, and excludes anything that ends in _unmanaged
@@ -75,8 +75,8 @@ namespace SpaceEngineersScripting
             manageTurrets(); //Toggles turrets; Red means on, no alerts means off.
 
             if (compactInventories && currentInternalIteration == 2) { doCompactInventories(); }
-            
-            
+
+
             //Power management subroutines
             //manageBatteries(); //Power Generation Management is broken and to be replaced in v1.3
             manageAnntenas(500, 35000); //First number is minimum range, and second is maximum range, in meters.
@@ -97,20 +97,20 @@ namespace SpaceEngineersScripting
         #region Variables
         // A dictionary of variables to be persisted, effectively serving as a cache.
         Dictionary<string, string> Variables = new Dictionary<string, string>();
-        
+
         //Cached variables, attempting to only fetch everything a single time throughout program life.
         List<IMyAssembler> assemblers = new List<IMyAssembler>();
         List<IMyRefinery> refineries = new List<IMyRefinery>();
 
         List<IMyTerminalBlock> batteries = new List<IMyTerminalBlock>();
         List<IMyTerminalBlock> solarpanels = new List<IMyTerminalBlock>();
-        List<IMyTerminalBlock> reactors = new List<IMyTerminalBlock>(); 
+        List<IMyTerminalBlock> reactors = new List<IMyTerminalBlock>();
         List<IMyTerminalBlock> antennas = new List<IMyTerminalBlock>();
         List<IMyTerminalBlock> beacons = new List<IMyTerminalBlock>();
         List<IMyTerminalBlock> turrets = new List<IMyTerminalBlock>();
         List<IMyTerminalBlock> welders = new List<IMyTerminalBlock>();
         List<IMyTerminalBlock> configLights = new List<IMyTerminalBlock>();
-        List<IMyTerminalBlock> gravityGenerators = new List<IMyTerminalBlock>(); 
+        List<IMyTerminalBlock> gravityGenerators = new List<IMyTerminalBlock>();
 
         List<IMyTextPanel> statusPanels = new List<IMyTextPanel>();
         List<IMyTextPanel> iconPanels = new List<IMyTextPanel>();
@@ -126,7 +126,7 @@ namespace SpaceEngineersScripting
         List<IMySoundBlock> speakersOrange = new List<IMySoundBlock>();
         List<IMySoundBlock> speakersRed = new List<IMySoundBlock>();
         List<IMySoundBlock> speakersPowerlow = new List<IMySoundBlock>();
-        
+
 
 
         public double wattHourInBatteries = 0;
@@ -137,7 +137,7 @@ namespace SpaceEngineersScripting
         public double batteryWatts = 0;
         public double batteryInputWatts = 0;
 
-        public double maxPower = 0;   
+        public double maxPower = 0;
         public double powerUsage = 0;
 
         public int dischargingBatteries = 0;
@@ -148,7 +148,7 @@ namespace SpaceEngineersScripting
         int activeRefineries = 0;
         int currentInternalIteration; //This is used to trigger things like purging old modules and such, and distribute load across iterations. Should never go higher than 10.
 
-        public bool tooManyBatteries = false; 
+        public bool tooManyBatteries = false;
         public bool tooManyReactors = false;
         public bool tooManySolarpanels = false;
         public bool tooManyAntennas = false;
@@ -258,7 +258,7 @@ namespace SpaceEngineersScripting
         void updateModules()
         {
 
-            var screenModuleMessage = getVariable("screenModuleStatus") ;
+            var screenModuleMessage = getVariable("screenModuleStatus");
             if (screenModuleMessage == "Red one standing by.")
             {
                 isScreenModulePresent = screenModuleMessage == "Red one standing by.";
@@ -313,12 +313,12 @@ namespace SpaceEngineersScripting
 
         void updateRefineries()
         {
-            
+
             activeRefineries = 0;
             if (debugPanel != null)
             {
                 debugPanel.WritePublicText("Updating refineries..", true);
-            } 
+            }
             refineries = getRefineries();
             for (int i = 0; i < refineries.Count; i++)
             {
@@ -330,7 +330,7 @@ namespace SpaceEngineersScripting
             if (debugPanel != null)
             {
                 debugPanel.WritePublicText(refineries.Count + " found.\n", true);
-            } 
+            }
         }
 
         void updateAssemblers()
@@ -339,7 +339,7 @@ namespace SpaceEngineersScripting
             if (debugPanel != null)
             {
                 debugPanel.WritePublicText("Updating assemblers..", true);
-            } 
+            }
 
             assemblers = getAssemblers();
             for (int i = 0; i < assemblers.Count; i++)
@@ -352,7 +352,7 @@ namespace SpaceEngineersScripting
             if (debugPanel != null)
             {
                 debugPanel.WritePublicText(assemblers.Count + " found.\n", true);
-            } 
+            }
         }
 
         void updateBrokenBlocks()
@@ -417,37 +417,42 @@ namespace SpaceEngineersScripting
             beacons = new List<IMyTerminalBlock>();
             turrets = new List<IMyTerminalBlock>();
             welders = new List<IMyTerminalBlock>();
-            configLights = new List<IMyTerminalBlock>(); 
-            
+            configLights = new List<IMyTerminalBlock>();
+
             List<IMyTerminalBlock> newlist = new List<IMyTerminalBlock>();
             GridTerminalSystem.GetBlocksOfType<IMyBatteryBlock>(batteries);
             for (int i = 0; i < batteries.Count; i++)
-            { if (!batteries[i].DisplayNameText.EndsWith("_unmanaged"))
-            { newlist.Add(batteries[i]); } if (i > executionCap) { tooManyBatteries = true; if (ignoreDevicesThatAreTooMuch) { debugOutput("Ignoring batteries out of processing range."); break; } }
+            {
+                if (!batteries[i].DisplayNameText.EndsWith("_unmanaged"))
+                { newlist.Add(batteries[i]); } if (i > executionCap) { tooManyBatteries = true; if (ignoreDevicesThatAreTooMuch) { debugOutput("Ignoring batteries out of processing range."); break; } }
             } debugOutput(newlist.Count + " batteries found.");
             batteries = newlist; newlist = new List<IMyTerminalBlock>();
             GridTerminalSystem.GetBlocksOfType<IMySolarPanel>(solarpanels);
             for (int i = 0; i < solarpanels.Count; i++)
-            { if (!solarpanels[i].DisplayNameText.EndsWith("_unmanaged"))
-            { newlist.Add(solarpanels[i]); if (i > executionCap) { tooManySolarpanels = true; if (ignoreDevicesThatAreTooMuch) { debugOutput("Ignoring solarpanels out of processing range."); break; } } }
+            {
+                if (!solarpanels[i].DisplayNameText.EndsWith("_unmanaged"))
+                { newlist.Add(solarpanels[i]); if (i > executionCap) { tooManySolarpanels = true; if (ignoreDevicesThatAreTooMuch) { debugOutput("Ignoring solarpanels out of processing range."); break; } } }
             }
             solarpanels = newlist; newlist = new List<IMyTerminalBlock>();
             GridTerminalSystem.GetBlocksOfType<IMyReactor>(reactors);
             for (int i = 0; i < reactors.Count; i++)
-            { if (!reactors[i].DisplayNameText.EndsWith("_unmanaged"))
-            { newlist.Add(reactors[i]); if (i > executionCap) { tooManyReactors = true; if (ignoreDevicesThatAreTooMuch) { debugOutput("Ignoring reactors out of processing range."); break; } } }
+            {
+                if (!reactors[i].DisplayNameText.EndsWith("_unmanaged"))
+                { newlist.Add(reactors[i]); if (i > executionCap) { tooManyReactors = true; if (ignoreDevicesThatAreTooMuch) { debugOutput("Ignoring reactors out of processing range."); break; } } }
             }
             reactors = newlist; newlist = new List<IMyTerminalBlock>();
             GridTerminalSystem.GetBlocksOfType<IMyBeacon>(beacons);
             for (int i = 0; i < beacons.Count; i++)
-            { if (!beacons[i].DisplayNameText.EndsWith("_unmanaged"))
-            { newlist.Add(beacons[i]); if (i > executionCap) { tooManyBeacons = true; if (ignoreDevicesThatAreTooMuch) { debugOutput("Ignoring beacons out of processing range."); break; } } }
+            {
+                if (!beacons[i].DisplayNameText.EndsWith("_unmanaged"))
+                { newlist.Add(beacons[i]); if (i > executionCap) { tooManyBeacons = true; if (ignoreDevicesThatAreTooMuch) { debugOutput("Ignoring beacons out of processing range."); break; } } }
             }
             beacons = newlist; newlist = new List<IMyTerminalBlock>();
             GridTerminalSystem.GetBlocksOfType<IMyRadioAntenna>(antennas);
             for (int i = 0; i < antennas.Count; i++)
-            { if (!antennas[i].DisplayNameText.EndsWith("_unmanaged"))
-            { newlist.Add(antennas[i]); if (i > executionCap) { tooManyAntennas = true; if (ignoreDevicesThatAreTooMuch) { debugOutput("Ignoring antennas out of processing range."); break; } } }
+            {
+                if (!antennas[i].DisplayNameText.EndsWith("_unmanaged"))
+                { newlist.Add(antennas[i]); if (i > executionCap) { tooManyAntennas = true; if (ignoreDevicesThatAreTooMuch) { debugOutput("Ignoring antennas out of processing range."); break; } } }
             }
             antennas = newlist; newlist = new List<IMyTerminalBlock>();
             GridTerminalSystem.GetBlocksOfType<IMyLargeTurretBase>(turrets);
@@ -501,7 +506,7 @@ namespace SpaceEngineersScripting
             debugOutput("Writing missing blockcounts");
             storeVariable("", "missingBlocks"); //Bugfix
             storeVariable(serializeDictionary(missingBlocks), "missingBlocks");
-            
+
             debugOutput("Writing power values");
             storeVariable(wattHourInBatteries.ToString(), "wattHourInBatteries");
             storeVariable(maxWattHourInBatteries.ToString(), "maxWattHourInBatteries");
@@ -517,7 +522,7 @@ namespace SpaceEngineersScripting
 
             storeVariable(maxPower.ToString(), "maxPower");
             storeVariable(powerUsage.ToString(), "powerUsage");
-            
+
             debugOutput("Writing block counts");
             storeVariable(reactors.Count.ToString(), "reactorCount");
             storeVariable(solarpanels.Count.ToString(), "solarpanelCount");
@@ -669,7 +674,8 @@ namespace SpaceEngineersScripting
                     output += getPowerAsDouble(getDetailedInfoValue(batteries[i], "Current Output"));
                     output -= getPowerAsDouble(getDetailedInfoValue(batteries[i], "Current Input"));
                 }
-                else if (max){
+                else if (max)
+                {
                     output += getPowerAsDouble(getDetailedInfoValue(batteries[i], "Max Output"));
                 }
             }
@@ -833,7 +839,7 @@ namespace SpaceEngineersScripting
                 {
                     debugOutput(string.Format("Toggling random {0}", batteries[i].DisplayNameText));
                     batteries[i].GetActionWithName("Recharge").Apply(batteries[i]);
-                    
+
                 }
             }
         }
@@ -847,7 +853,7 @@ namespace SpaceEngineersScripting
         public string getNormalizedPowerString(double watts, bool hour)
         {
             string h = "";
-            if(hour){ h = "h";}
+            if (hour) { h = "h"; }
             if (watts > 1000000000)
             {
                 return string.Format("{0}Gw{1}", watts / 1000000000, h);
@@ -997,7 +1003,7 @@ namespace SpaceEngineersScripting
 
             return returndict;
         }
-        
+
         // Stores a variable in the Variables dictionary.
         // Use flushVariables (preferrably at the end of execution) to actually save.
         // ** Colons and newlines can now be used, as I'm substituting them internally.
@@ -1048,7 +1054,7 @@ namespace SpaceEngineersScripting
                 string value = entry.Value.Replace(":", "[COLON]").Replace("\n", "[NEWLINE]");
                 result.Append("\n" + entry.Key + ":" + value);
             }
-           
+
             storagePanel.WritePublicText(result.ToString());
             debugOutput(storagePanel.DisplayNameText);
         }
@@ -1084,7 +1090,8 @@ namespace SpaceEngineersScripting
 
         void soundAlerts()
         {
-            if (codeBlue) {
+            if (codeBlue)
+            {
                 for (int i = 0; i < speakersBlue.Count; i++)
                 {
                     debugOutput("Playing sound on " + speakersBlue[i].DefinitionDisplayNameText);
@@ -1095,7 +1102,8 @@ namespace SpaceEngineersScripting
                     }
                 }
             }
-            else if (codeOrange) {
+            else if (codeOrange)
+            {
                 for (int i = 0; i < speakersOrange.Count; i++)
                 {
                     debugOutput("Playing sound on " + speakersOrange[i].DefinitionDisplayNameText);
@@ -1106,7 +1114,8 @@ namespace SpaceEngineersScripting
                     }
                 }
             }
-            else if (codeRed) {
+            else if (codeRed)
+            {
                 for (int i = 0; i < speakersRed.Count; i++)
                 {
                     debugOutput("Playing sound on " + speakersRed[i].DefinitionDisplayNameText);
@@ -1137,12 +1146,12 @@ namespace SpaceEngineersScripting
             {
                 shortStatus = string.Format("All systems functional. {0} systems offline.", offlineBlockCount);
             }
-            
+
             if (brokenBlockCount > 0)
             {
                 shortStatus = string.Format("Warning: {0} systems unavailable.", brokenBlockCount);
             }
-            
+
             if (isProjectorPresent)
             {
                 if (missingBlockCount > 0)
@@ -1167,7 +1176,7 @@ namespace SpaceEngineersScripting
                 StatusString += "\n  -No projector detected. Missing block detection offline.";
             }
 
-        
+
 
             //Update stuff for the Screens module
             if (isScreenModulePresent)
@@ -1175,7 +1184,7 @@ namespace SpaceEngineersScripting
                 offlineReport = getDamageReport(true);
             }
 
-            
+
 
 
             // Generate Status messages 
@@ -1223,39 +1232,39 @@ namespace SpaceEngineersScripting
             powerReport = string.Format(
                 " {0}/{1} currently used.",
                 new string[] { 
-                    getNormalizedPowerString(powerUsage, false) ,
-                    getNormalizedPowerString(maxPower, false)
-                }); ;
+                        getNormalizedPowerString(powerUsage, false) ,
+                        getNormalizedPowerString(maxPower, false)
+                    }); ;
             if (batteries.Count > 0)
             {
                 powerReport += string.Format(
                     "\n *Batteries: {0}/{1} in {2} batteries ({3} in use)",
                     new string[] {
-                        getNormalizedPowerString(wattHourInBatteries,true),
-                        getNormalizedPowerString(maxWattHourInBatteries,true),
-                        batteries.Count.ToString(),
-                        getDischargingBatteryCount().ToString()
-                    });
+                            getNormalizedPowerString(wattHourInBatteries,true),
+                            getNormalizedPowerString(maxWattHourInBatteries,true),
+                            batteries.Count.ToString(),
+                            getDischargingBatteryCount().ToString()
+                        });
             }
             if (solarpanels.Count > 0)
             {
                 powerReport += string.Format(
                    "\n *Solar: {2} panels | {0}/{1}",
                    new string[] {
-                        getNormalizedPowerString(solarPower(false),false),
-                        getNormalizedPowerString(solarpanelWatts,false), 
-                        solarpanels.Count.ToString()
-                    });
+                            getNormalizedPowerString(solarPower(false),false),
+                            getNormalizedPowerString(solarpanelWatts,false), 
+                            solarpanels.Count.ToString()
+                        });
             }
             if (reactors.Count > 0)
             {
                 powerReport += string.Format(
                     "\n *Reactors: {2} reactors | {0}/{1}",
                     new string[] {
-                        getNormalizedPowerString(reactorPower(false),false),
-                        getNormalizedPowerString(reactorWatts,false),
-                        reactors.Count.ToString()
-                    });
+                            getNormalizedPowerString(reactorPower(false),false),
+                            getNormalizedPowerString(reactorWatts,false),
+                            reactors.Count.ToString()
+                        });
             }
             debugOutput("status: " + StatusString);
 
@@ -1286,9 +1295,9 @@ namespace SpaceEngineersScripting
                 antennaString = string.Format(
                     "{1}",
                     new string[] {
-                        antennas.Count.ToString(),
-                        antString
-                    });
+                            antennas.Count.ToString(),
+                            antString
+                        });
                 shortCommsStatus = tempshortCommsStatus;
             }
 
@@ -1312,9 +1321,9 @@ namespace SpaceEngineersScripting
                 beaconString = string.Format(
                     "{1}",
                     new string[] {
-                        beacons.Count.ToString(),
-                        beacString
-                    });
+                            beacons.Count.ToString(),
+                            beacString
+                        });
             }
             debugOutput("Done.");
         }
@@ -1327,7 +1336,7 @@ namespace SpaceEngineersScripting
         {
             //Fetch and prepare variables for use
 
-            
+
 
             //Format information for displaying
             StringBuilder updateScreenBuilder = new StringBuilder();
@@ -1348,9 +1357,9 @@ namespace SpaceEngineersScripting
                     string.Format(
                     "{0} assemblers, {1} active.",
                     new string[] {
-                        assemblers.Count.ToString(), 
-                        activeAssemblers.ToString() 
-                        })
+                            assemblers.Count.ToString(), 
+                            activeAssemblers.ToString() 
+                            })
                     );
             }
 
@@ -1362,9 +1371,9 @@ namespace SpaceEngineersScripting
                     string.Format(
                     "{0} refineries, {1} active.",
                     new string[] {
-                        refineries.Count.ToString(), 
-                        activeRefineries.ToString() 
-                        })
+                            refineries.Count.ToString(), 
+                            activeRefineries.ToString() 
+                            })
                     );
             }
 
@@ -1382,7 +1391,7 @@ namespace SpaceEngineersScripting
 
 
             //Apply text to all screens with _status suffix
-            for (int i = 0; i <  statusPanels.Count; i++)
+            for (int i = 0; i < statusPanels.Count; i++)
             {
                 if (statusPanels[i].DisplayNameText.EndsWith("_status"))
                 {
@@ -1404,7 +1413,7 @@ namespace SpaceEngineersScripting
                     iconPanels[i].ShowPublicTextOnScreen();
                     iconPanels[i].ShowTextureOnScreen();
                     iconPanels[i].AddImageToSelection("Construction");
-                    
+
                     //THIS IS BROKEN UNTIL WE CAN REMOVE IMAGES. For fuck sake Keen Dx
                 }
             }
@@ -1422,7 +1431,7 @@ namespace SpaceEngineersScripting
         //    if (currentConfigScreen == ConfigScreens.Main)
         //    {
         //        output.AppendLine("Hello! Welcome to the Configuration and Interation module.");
-                
+
         //    }
 
         //    updateConfigScreen(output.ToString());
@@ -1440,7 +1449,7 @@ namespace SpaceEngineersScripting
 
         //}
         ////End stuff for config module
-        
+
 
         /// <summary>
         /// Automatically increases/decreases antenna range to available power
@@ -1461,7 +1470,7 @@ namespace SpaceEngineersScripting
                     }
                 }
             }
-            else if(maxPower -100 > powerUsage) //Only up the range if there's enough power overhead
+            else if (maxPower - 100 > powerUsage) //Only up the range if there's enough power overhead
             {
                 for (int i = 0; i < antennas.Count; i++)
                 {
@@ -1627,11 +1636,11 @@ namespace SpaceEngineersScripting
             {
                 if (wattHourInBatteries < (maxWattHourInBatteries / 4)) //If battery is low
                 {
-                    debugOutput("Turning on reactors (maxpower<usage, watthoursinbats<maxwatthours/4)" );
+                    debugOutput("Turning on reactors (maxpower<usage, watthoursinbats<maxwatthours/4)");
                     for (int i = 0; i < reactors.Count; i++)
                     {
                         reactors[i].ApplyAction("OnOff_On"); //Turn on all reactors
-                        
+
                     }
                     if (!chargeBatteries) //And if we don't wanna charge the batteries with reactor power
                     {
@@ -1726,12 +1735,12 @@ namespace SpaceEngineersScripting
                         inventory.TransferItemTo(inventory, x, stackIfPossible: true);
                     }
                 }
-            } 
+            }
         }
 
         #endregion
 
-        
+
 
         #endregion
     }
