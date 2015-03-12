@@ -42,6 +42,10 @@ namespace SpaceEngineersScripting
             currentInternalIteration++; //Don't remove this
             updateLCDPanels(); //Must be first to execute, otherwise ai_storage and debugpanel are unavailable.
 
+            // Without this, persisted variables won't be usable.
+            debugOutput("Loading variables into internal cache");
+            loadVariables();
+            
             debugOutput("Running internal Update Modules");
             updateModules(); //Checks if there's a screen module present or other modules in the future.
             updateMiscWithBlacklist(); //Updates things like assemblers, refineries, lights, speakers, etc, and excludes anything that ends in _unmanaged
@@ -86,8 +90,14 @@ namespace SpaceEngineersScripting
             if (currentInternalIteration > 9) { currentInternalIteration = 0; }
             debugOutput("AI Iteration " + currentInternalIteration.ToString() + " finished.");
 
+            // Without this, changes to variables won't persist.
+            debugOutput("Dumping variable cache to persistent storage");
+            flushVariables();
         }
         #region Variables
+        // A dictionary of variables to be persisted, effectively serving as a cache.
+        Dictionary<string, string> Variables = new Dictionary<string, string>();
+        
         //Cached variables, attempting to only fetch everything a single time throughout program life.
         List<IMyAssembler> assemblers = new List<IMyAssembler>();
         List<IMyRefinery> refineries = new List<IMyRefinery>();
@@ -987,60 +997,83 @@ namespace SpaceEngineersScripting
 
             return returndict;
         }
-
-
-
-        //Stores a variable using a LCD panel named 'ai_storage'. 
-        //Colons and newlines can now be used, as I'm substituting them internally.
+        
+        // Stores a variable in the Variables dictionary.
+        // Use flushVariables (preferrably at the end of execution) to actually save.
+        // ** Colons and newlines can now be used, as I'm substituting them internally.
         void storeVariable(string variable, string name)
         {
-            
-            variable = variable.Replace(":", "[COLON]").Replace("\n", "[NEWLINE]");
-            List<string> c = new List<string>();
-            string b = storagePanel.GetPublicText();
-            string oldvar;
-            if (b.Contains(name + ":"))
+            if (Variables.ContainsKey(name))
             {
-                oldvar = getVariable(name).Replace(":", "[COLON]").Replace("\n", "[NEWLINE]");
-                b = b.Replace(name + ":" + oldvar, name + ":" + variable);
+                Variables[name] = variable;
             }
             else
             {
-                b += "\n"+ name + ":" + variable;
+                Variables.Add(name, variable);
             }
-
-            storagePanel.WritePublicText(b);
-            debugOutput(storagePanel.DisplayNameText);
-            //storeVariable is called too much to always log on AI core.
-            //debugOutput(string.Format("storeVariable(): {0} '{1}'", name, variable));
         }
 
-        //Retrieves a variables from the ai_storage LCD panel.
+        // Reads a variable from the Variables dictionary, which will persist using
+        // a screen as storage.
         string getVariable(string name)
         {
-            List<string> b = new List<string>();
-            b.AddRange(storagePanel.GetPublicText().Split('\n'));
-            string toReturn = null;
-            for (int i = 0; i < b.Count; i++)
+            if (Variables.ContainsKey(name))
             {
-                if (b[i].StartsWith(name))
-                {
-                    toReturn = b[i].Split(':')[1].Replace("[NEWLINE]", "\n").Replace("[COLON]", ":");
-                    break;
-                }
-            }
-            if (toReturn == null)
-            {
-                debugOutput(string.Format("No variable '{0}' found.", name));
+                return Variables[name];
             }
             else
             {
-                
-                //This is too heavily used to always debug. Turn on if necessary.
-                //debugOutput(string.Format("getVariable(): {0} '{1}'", name, toReturn));
+                return null;
             }
+        }
 
-            return toReturn;
+        // Write the contents of Variables to a screen for use as storage.
+        // If this isn't called, then any changes to variables will not be persistent.
+        void flushVariables(bool append = false)
+        {
+            StringBuilder result = new StringBuilder();
+            if (append)
+            {
+                // This may result in duplicates if you aren't careful.
+                result.Append(storagePanel.GetPublicText());
+            }
+            string[] keys = new string[Variables.Count];
+            Variables.Keys.CopyTo(keys, 0);
+            string[] values = new string[Variables.Count];
+            Variables.Values.CopyTo(values, 0);
+            for (int i = 0; i < Variables.Count; i++)
+            {
+                KeyValuePair<string, string> entry = new KeyValuePair<string, string>(keys[i], values[i]);
+                // Not sure if first value has no \n, but oh well.
+                string value = entry.Value.Replace(":", "[COLON]").Replace("\n", "[NEWLINE]");
+                result.Append("\n" + entry.Key + ":" + value);
+            }
+           
+            storagePanel.WritePublicText(result.ToString());
+            debugOutput(storagePanel.DisplayNameText);
+        }
+
+        // Load variables from a screen used as storage.
+        // If this isn't called, then previously persisted variables will not be visible.
+        void loadVariables()
+        {
+            string[] source = storagePanel.GetPublicText().Split('\n');
+            foreach (string pair in source)
+            {
+                if (pair == "")
+                {
+                    // This is usually true of the first entry.
+                    continue;
+                }
+                string[] truePair = pair.Split(':');
+                string name = truePair[0];
+                string value = "";
+                if (truePair.Length > 1)
+                {
+                    value = truePair[1].Replace("[NEWLINE]", "\n").Replace("[COLON]", ":");
+                }
+                storeVariable(value, name);
+            }
         }
 
         #endregion
