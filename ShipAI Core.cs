@@ -8,6 +8,7 @@ namespace SpaceEngineersScripting
     class CodeEditorEmulator
     {
         IMyGridTerminalSystem GridTerminalSystem = null;
+        public string Storage; //Only used when storagePanel isn't present.
 
         #region CodeEditor
 
@@ -22,7 +23,7 @@ namespace SpaceEngineersScripting
         //You can change some basic behavior here with these variables. 
         //If you want to toggle modules, see the Main() method at the bottom of the file.
 
-        //Due to execution limits, we can not enumerate more than about 120 devices per catagory, or the script will simply be halted.
+        //Due to execution limits, we can not enumerate more than about 120 devices per category, or the script will simply be halted.
         const int executionCap = 120;
         const int debugMaxCharacters = 5000;
         const float minimumGravity = 0.1f;
@@ -44,7 +45,7 @@ namespace SpaceEngineersScripting
         {
             if (VUM == null)
             {
-                VUM = new VariableUpdateManagement(GridTerminalSystem);
+                VUM = new VariableUpdateManagement(GridTerminalSystem, Storage);
             }
             VUM.currentInternalIteration++; //Don't remove this
             
@@ -252,7 +253,7 @@ namespace SpaceEngineersScripting
             var powerUsage = VUM.powerUsage;
             var maxPower = VUM.maxPower;
 
-            if (gravityGenerators.Count < 1) { return; debugOutput("No gravity generators found to manage"); }
+            if (gravityGenerators.Count < 1) { debugOutput("No gravity generators found to manage"); return; }
             for (int i = 0; i < gravityGenerators.Count; i++)
             {
                 var curGen = ((IMyGravityGenerator)gravityGenerators[i]);
@@ -354,9 +355,6 @@ namespace SpaceEngineersScripting
             else { assemblers.ForEach(s => s.RequestEnable(false)); }
         }
 
-       
-
-
         /// <summary>
         /// This function automatically toggles turrets when the alertState goes to Red.
         /// </summary>
@@ -403,13 +401,40 @@ namespace SpaceEngineersScripting
             }
         }
 
+        //Below are internally used functions
+
+        /// <summary>
+        /// Turns a device on or off, but only if it's not already in the requested state.
+        /// </summary>
+        /// <param name="device">The device to toggle</param>
+        /// <param name="state">Desired state (i.e on or off)</param>
+        void toggleDeviceIfNeeded(IMyFunctionalBlock device, bool state)
+        {
+            if (state)
+            {
+                if (!device.Enabled)
+                {
+                    device.RequestEnable(state);
+                }
+            }
+            else
+            {
+                if (device.Enabled)
+                {
+                    device.RequestEnable(state);
+                }
+            }
+
+        }
+
         #endregion
 
         #region AI_Subsystems
         class VariableUpdateManagement
         {
             IMyGridTerminalSystem GridTerminalSystem;
-            public VariableUpdateManagement(IMyGridTerminalSystem _sys)
+            string Storage;
+            public VariableUpdateManagement(IMyGridTerminalSystem _sys, string _stor)
             {
                 GridTerminalSystem = _sys;
                 updateLCDPanels(); //Must be first to execute, otherwise ai_storage and debugpanel are unavailable.
@@ -457,7 +482,7 @@ namespace SpaceEngineersScripting
             public List<IMyTextPanel> iconPanels = new List<IMyTextPanel>();
             public List<IMyTextPanel> configPanels = new List<IMyTextPanel>();
             public IMyTextPanel debugPanel;
-            public IMyTextPanel storagePanel;
+            public IMyTextPanel storagePanel; //Can't use Storage string if there's modules present!
 
             public IMyProjector healingProjector;
             public Dictionary<string, int> missingBlocks = new Dictionary<string, int>();
@@ -616,10 +641,10 @@ namespace SpaceEngineersScripting
                 storagePanel = (IMyTextPanel)GridTerminalSystem.GetBlockWithName("ai_storage");
                 if (storagePanel == null)
                 {
-                    debugOutput("ERROR: NO STORAGE FOUND. Throwing exception..");
-                    debugOutput("Please create an LCD panel named 'ai_storage'.");
-                    debugOutput("Storage is required for proper functioning of the AI.");
-                    throw new Exception("No storage found!\nPlease create an LCD panel named 'ai_storage', edit the script and Remember and Exit again.\nCreate a panel named 'debugpanel' for more info.");
+                    debugOutput("WARNING: NO EXTERNAL STORAGE FOUND.");
+                    debugOutput("If you want to connect modules, external storage is required.");
+                    debugOutput("You can do this by creating an LCD panel named 'ai_storage'.");
+                    //throw new Exception("No storage found!\nPlease create an LCD panel named 'ai_storage', edit the script and Remember and Exit again.\nCreate a panel named 'debugpanel' for more info.");
                 }
                 if (debugPanel != null) { debugPanel.WritePublicText(""); }
 
@@ -1041,7 +1066,14 @@ namespace SpaceEngineersScripting
                 if (append)
                 {
                     // This may result in duplicates if you aren't careful.
-                    result.Append(storagePanel.GetPublicText());
+                    if (storagePanel == null)
+                    {
+                        result.Append(Storage);
+                    }
+                    else
+                    {
+                        result.Append(storagePanel.GetPublicText());
+                    }
                 }
                 string[] keys = new string[Variables.Count];
                 Variables.Keys.CopyTo(keys, 0);
@@ -1055,15 +1087,32 @@ namespace SpaceEngineersScripting
                     result.Append("\n" + entry.Key + ":" + value);
                 }
 
-                storagePanel.WritePublicText(result.ToString());
-                debugOutput(storagePanel.DisplayNameText);
+                if (storagePanel == null)
+                {
+                    Storage = result.ToString();
+                }
+                else
+                {
+                    storagePanel.WritePublicText(result.ToString());
+                    Storage = result.ToString(); //Keep them in sync in just in case.
+                }
             }
 
             // Load variables from a screen used as storage.
             // If this isn't called, then previously persisted variables will not be visible.
             public void loadVariables()
             {
-                string[] source = storagePanel.GetPublicText().Split('\n');
+                string[] source = null;
+                if (storagePanel == null)
+                {
+                    if (Storage == null) { Storage = ""; }
+                    if (Storage == null) { throw new Exception("Failed to initialize Storage."); }
+                    source = Storage.Split('\n');
+                }
+                else
+                {
+                    source = storagePanel.GetPublicText().Split('\n');
+                }
                 foreach (string pair in source)
                 {
                     if (pair == "")
