@@ -54,8 +54,9 @@ namespace SpaceEngineersScripting
             if (!VUM.isScreenModulePresent)
             {
                 debugOutput("No Screen module found, printing to status panels from core..");
-                VUM.updateStatusPanels(); //Turn this off if you have the AI Screen Module.
+                VUM.updateStatusPanels(); 
             }
+     
 
 
             //Management modules are below here. Things like power management, turret management, etc.
@@ -85,6 +86,7 @@ namespace SpaceEngineersScripting
             debugOutput("Dumping variable cache to persistent storage");
             VUM.flushVariables();
         }
+
 
         public static bool isHealthy(IMyTerminalBlock block)
         {
